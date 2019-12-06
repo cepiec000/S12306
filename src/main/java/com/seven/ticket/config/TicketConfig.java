@@ -8,8 +8,8 @@ package com.seven.ticket.config;
  **/
 public class TicketConfig {
     //登陆账户
-    public static final String LOGIN_NAME = "cepiec000";
-    public static final String PASSWORD = "cdd520zyh";
+    public static final String LOGIN_NAME = "xxxxx";
+    public static final String PASSWORD = "xxxxx";
 
     //发车时间
     public static final String START_DATE = "2019-12-05";
