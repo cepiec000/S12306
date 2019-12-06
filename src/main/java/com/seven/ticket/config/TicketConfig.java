@@ -31,7 +31,7 @@ public class TicketConfig {
     public static final String[] SEATS = {"硬卧", "软卧"};
 
     //乘客 多个 逗号分割，（必须保证用户 已添加到 改账户里面）
-    public static final String PASSENGER_NAME = "陈冬冬,张亚辉";
+    public static final String PASSENGER_NAME = "xxxxx";
 
 
 }
