@@ -1,6 +1,6 @@
 package com.seven.ticket.thread;
 
-import com.seven.ticket.manager.ManagerFactory;
+import com.seven.ticket.manager.LoginManager;
 
 /**
  * @Description: TODO
@@ -15,7 +15,7 @@ public class CheckLoginThread extends Thread {
     @Override
     public void run() {
         while (true) {
-            ManagerFactory.loginInstance().otn();
+            LoginManager.otn();
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -34,7 +34,7 @@ public class CheckLoginThread extends Thread {
     public static void isLogin() {
         try {
             if ((!isLogin || checkTime())) {
-                if (ManagerFactory.capchaInstance().doNeedCapcha() && ManagerFactory.capchaInstance().verifyChapcha()) {
+                if (LoginManager.login()) {
                     isLogin = true;
                     checkTime = System.currentTimeMillis();
                 } else {

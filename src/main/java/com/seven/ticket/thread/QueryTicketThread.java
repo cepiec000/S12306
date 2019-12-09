@@ -2,7 +2,6 @@ package com.seven.ticket.thread;
 
 import com.seven.ticket.config.TicketConfig;
 import com.seven.ticket.entity.QueryTicket;
-import com.seven.ticket.manager.ManagerFactory;
 import com.seven.ticket.manager.OrderManager;
 import com.seven.ticket.manager.TicketManager;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +24,7 @@ public class QueryTicketThread extends Thread {
                 List<QueryTicket> tickets = TicketManager.query();
                 if (tickets != null)
                     for (QueryTicket ticket : tickets) {
-                        if (ManagerFactory.orderInstance().submitOrderEntrance(ticket)) {
+                        if (OrderManager.submitOrderEntrance(ticket)) {
                             log.info("!!!!购票完成!!!!");
                             isOk = true;
                             break;

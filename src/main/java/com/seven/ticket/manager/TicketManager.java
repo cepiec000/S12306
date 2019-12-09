@@ -4,6 +4,7 @@ import com.seven.ticket.config.TicketConfig;
 import com.seven.ticket.convert.TicketConvert;
 import com.seven.ticket.entity.QueryTicket;
 import com.seven.ticket.request.OkHttpRequest;
+import com.seven.ticket.utils.StationUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -35,6 +36,10 @@ public class TicketManager {
         }
         if (toStation == null) {
             log.error("无法找到到达站站点【" + TicketConfig.TO_NAME + "】，请确保到达站点名正确。");
+            System.exit(0);
+        }
+        if (!StationUtil.checkTrainDate(trainDate)){
+            log.error("发车日期【" + TicketConfig.START_DATE + "】，不能小于当前日期。");
             System.exit(0);
         }
         String url = "https://kyfw.12306.cn/otn/leftTicket/query?leftTicketDTO.train_date={0}&leftTicketDTO.from_station={1}&leftTicketDTO.to_station={2}&purpose_codes=ADULT";

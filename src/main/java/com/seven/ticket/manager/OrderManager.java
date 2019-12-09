@@ -41,18 +41,18 @@ public class OrderManager {
      *
      * @return
      */
-    public boolean submitOrderEntrance(QueryTicket ticket) {
+    public static boolean submitOrderEntrance(QueryTicket ticket) {
         CheckLoginThread.isLogin();
         //检查用户
-        if (!ManagerFactory.orderInstance().checkUser()) {
+        if (!checkUser()) {
             return false;
         }
         //预下单
-        if (!ManagerFactory.orderInstance().submitOrderRequest(ticket)) {
+        if (!submitOrderRequest(ticket)) {
             return false;
         }
         //获取下单 token
-        Map<String, String> submitTokenMap = ManagerFactory.orderInstance().getSubmitToken();
+        Map<String, String> submitTokenMap = getSubmitToken();
         if (submitTokenMap == null) {
             return false;
         }
@@ -71,21 +71,21 @@ public class OrderManager {
             System.exit(0);
         }
         //开始下单
-        int check = ManagerFactory.orderInstance().checkOrderInfo(oldPassengerStr, passengerTicketStr, repeToken);
+        int check = checkOrderInfo(oldPassengerStr, passengerTicketStr, repeToken);
         if (check == -1) {
             return false;
         } else if (check == 1) {
             //需要验证码
-            if (!ManagerFactory.orderInstance().verifyOrderChapcha(repeToken)) {
+            if (!verifyOrderChapcha(repeToken)) {
                 return false;
             }
         }
         //获取排队
-        if (!ManagerFactory.orderInstance().getQueueCount(ticket, repeToken)) {
+        if (!getQueueCount(ticket, repeToken)) {
             return false;
         }
         //提交订单
-        if (!ManagerFactory.orderInstance().confirmSingleForQueue(ticket, passengerTicketStr, oldPassengerStr, repeToken, submitTokenMap.get(REPE_TOKEN_IS_CHANGE))) {
+        if (!confirmSingleForQueue(ticket, passengerTicketStr, oldPassengerStr, repeToken, submitTokenMap.get(REPE_TOKEN_IS_CHANGE))) {
             return false;
         }
         //循环等待 购票结果
@@ -105,7 +105,7 @@ public class OrderManager {
      * @param repeToken
      * @return
      */
-    public String whileGetOrderId(String repeToken) {
+    public static String whileGetOrderId(String repeToken) {
         String orderId = null;
         while (orderId == null) {
             try {
@@ -124,12 +124,12 @@ public class OrderManager {
      * @param repeToken
      * @return
      */
-    public boolean verifyOrderChapcha(String repeToken) {
+    public static boolean verifyOrderChapcha(String repeToken) {
         //下单需要验证码
         boolean verifyOrderChapcha = false;
         int verifyOrderChapchaCount = 3;
         while (!verifyOrderChapcha && verifyOrderChapchaCount > 0) {
-            if (!ManagerFactory.capchaInstance().verifyOrderChapcha(repeToken)) {
+            if (!LoginManager.verifyOrderLogin(repeToken)) {
                 log.error("下单验证码，验证失败,次数 {}", verifyOrderChapchaCount);
                 verifyOrderChapchaCount--;
             } else {
@@ -146,8 +146,8 @@ public class OrderManager {
      * @param repeToken
      * @return
      */
-    private String[] buildPassengerData(QueryTicket ticket, String repeToken) {
-        List<Map> userList = ManagerFactory.orderInstance().getPassengerInfo(repeToken);
+    private static String[] buildPassengerData(QueryTicket ticket, String repeToken) {
+        List<Map> userList = getPassengerInfo(repeToken);
         if (userList == null || userList.size() == 0) {
             return new String[]{};
         }
@@ -175,7 +175,7 @@ public class OrderManager {
         return new String[]{oldPassengerStr, passengerTicketStr};
     }
 
-    public boolean checkUser() throws RuntimeException {
+    public static boolean checkUser() throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/login/checkUser";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("_json_att", "");
@@ -206,13 +206,13 @@ public class OrderManager {
         return false;
     }
 
-    public boolean submitOrderRequest(QueryTicket ticket) throws RuntimeException {
+    public static boolean submitOrderRequest(QueryTicket ticket) throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/leftTicket/submitOrderRequest";
         HashMap<String, String> formData = new HashMap<>();
         try {
             formData.put("secretStr", URLDecoder.decode(ticket.getSecretStr(), "UTF-8"));
             formData.put("train_date", TicketConfig.START_DATE);
-            formData.put("back_train_date", StationUtil.nowDate());
+            formData.put("back_train_date", StationUtil.nowDateStr());
             formData.put("tour_flag", "dc");
             formData.put("purpose_codes", "ADULT");
             formData.put("query_from_station_name", TicketConfig.FROM_NAME);
@@ -260,7 +260,7 @@ public class OrderManager {
      * @param orderId
      * @return
      */
-    private boolean resultOrderForDcQueue(String orderId, String token, QueryTicket ticket) throws RuntimeException {
+    private static boolean resultOrderForDcQueue(String orderId, String token, QueryTicket ticket) throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/confirmPassenger/resultOrderForDcQueue";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("orderSequence_no", orderId);
@@ -290,7 +290,7 @@ public class OrderManager {
         return false;
     }
 
-    public String queryOrderWaitTime(String token) {
+    public static String queryOrderWaitTime(String token) {
         String url = "https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime?random=" + System.currentTimeMillis() + "&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN=" + token;
         HttpGet httpGet = new HttpGet(url);
         httpGet.setHeader("Host", OkHttpRequest.HOST);
@@ -330,7 +330,7 @@ public class OrderManager {
      * @param keyCheckIsChange
      * @return
      */
-    public boolean confirmSingleForQueue(QueryTicket ticket, String passengerTicketStr, String oldPassengerStr, String token, String keyCheckIsChange) throws RuntimeException {
+    public static boolean confirmSingleForQueue(QueryTicket ticket, String passengerTicketStr, String oldPassengerStr, String token, String keyCheckIsChange) throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/confirmPassenger/confirmSingleForQueue";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("passengerTicketStr", passengerTicketStr);
@@ -377,7 +377,7 @@ public class OrderManager {
         return false;
     }
 
-    public boolean getQueueCount(QueryTicket ticket, String token) throws RuntimeException {
+    public static boolean getQueueCount(QueryTicket ticket, String token) throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/confirmPassenger/getQueueCount";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("train_date", StationUtil.getGMT(TicketConfig.START_DATE));
@@ -431,7 +431,7 @@ public class OrderManager {
      *
      * @return
      */
-    public Map<String, String> getSubmitToken() throws RuntimeException {
+    public static Map<String, String> getSubmitToken() throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/confirmPassenger/initDc";
 
         HashMap<String, String> formData = new HashMap<>();
@@ -461,7 +461,7 @@ public class OrderManager {
      * @param token
      * @return
      */
-    public int checkOrderInfo(String oldPassengerStr, String passengerTicketStr, String token) throws RuntimeException {
+    public static int checkOrderInfo(String oldPassengerStr, String passengerTicketStr, String token) throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/confirmPassenger/checkOrderInfo";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("cancel_flag", "2");
@@ -515,7 +515,7 @@ public class OrderManager {
      * @param token
      * @return
      */
-    public List<Map> getPassengerInfo(String token) throws RuntimeException {
+    public static List<Map> getPassengerInfo(String token) throws RuntimeException {
         if (userList == null) {
             String url = "https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs";
             HashMap<String, String> formData = new HashMap<>();
@@ -547,7 +547,7 @@ public class OrderManager {
         return userList;
     }
 
-    private Map<String, String> getTokenMap(String responseText) {
+    private static Map<String, String> getTokenMap(String responseText) {
         if (StringUtils.isBlank(responseText)) {
             return null;
         }

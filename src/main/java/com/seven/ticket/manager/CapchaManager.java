@@ -32,12 +32,10 @@ import java.util.List;
 public class CapchaManager {
 
 
-    public boolean doNeedCapcha() throws RuntimeException {
-        int i = 0;
+    public static boolean needCapcha() throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/login/conf";
         HttpPost httpPost = OkHttpRequest
                 .setRequestHeader(new HttpPost(url), true, false, false);
-        i++;
         httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/resources/login.html");
         httpPost.setHeader("Accept", "*/*");
         httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
@@ -58,39 +56,12 @@ public class CapchaManager {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-
         return false;
     }
 
-    public boolean verifyChapcha() {
-        log.info("获取验证码");
-        String base64Img = ManagerFactory.capchaInstance().getCaptchaBase64Img();
-        String filePath = ManagerFactory.capchaInstance().captchaBase64ImgToFile(base64Img);
-        log.info("AI智能解析验证码");
-        String codeIdx = ManagerFactory.capchaInstance().aiAnswerCode(filePath);
-        String answercode = OkHttpRequest.getCaptchaPos(codeIdx);
-        log.info("验证验证码:{}", answercode);
-        if (ManagerFactory.capchaInstance().checkCaptcha(answercode) && ManagerFactory.loginInstance().reLogin(answercode)) {
-            return true;
-        }
-        return false;
-    }
 
-    public boolean verifyOrderChapcha(String token) {
-        log.info("获取验证码");
-        String base64Img = ManagerFactory.capchaInstance().getCaptchaBase64Img();
-        String filePath = ManagerFactory.capchaInstance().captchaBase64ImgToFile(base64Img);
-        log.info("AI智能解析验证码");
-        String codeIdx = ManagerFactory.capchaInstance().aiAnswerCode(filePath);
-        String answerCode = OkHttpRequest.getCaptchaPos(codeIdx);
-        if (ManagerFactory.capchaInstance().checkOrderCaptcha(answerCode, token)) {
-            return true;
-        }
-        return false;
-    }
 
-    private boolean checkOrderCaptcha(String answerCode, String repeatToken) throws RuntimeException {
+    public static boolean checkOrderCaptcha(String answerCode, String repeatToken) {
         String url = "https://kyfw.12306.cn/otn/passcodeNew/checkRandCodeAnsyn";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("REPEAT_SUBMIT_TOKEN", repeatToken);
@@ -115,13 +86,13 @@ public class CapchaManager {
                 log.error("下单验证码验证失败:" + responseText);
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            log.error("下单验证码异常:{}",e.getMessage());
         }
 
         return false;
     }
 
-    public String getCaptchaBase64Img() throws RuntimeException{
+    public static String getCaptchaBase64Img() throws RuntimeException{
         String url = "https://kyfw.12306.cn/passport/captcha/captcha-image64?login_site=E&module=login&rand=sjrand&" + RandomUtil.genRandNumber() + "&callback=callback&_=" + System.currentTimeMillis();
         HttpGet httpGet = OkHttpRequest.setRequestHeader(new HttpGet(url), true, false, false);
         CloseableHttpResponse response = null;
@@ -138,7 +109,7 @@ public class CapchaManager {
 
     }
 
-    public String captchaBase64ImgToFile(String imgBase64) {
+    public static String captchaBase64ImgToFile(String imgBase64) {
         File file = new File(Constants.VERIFY_IMG_PATH);
         if (!file.exists()) {
             file.mkdirs();
@@ -148,11 +119,11 @@ public class CapchaManager {
         return filePath;
     }
 
-    private String getNewLoginCaptchaImgFileName() {
+    private static String getNewLoginCaptchaImgFileName() {
         return "login" + RandomUtil.randomString(5) + ".png";
     }
 
-    public String aiAnswerCode(String imgPath) {
+    public static String aiAnswerCode(String imgPath) {
         try {
             try {
                 // 此AI不支持验证多个标签的图片验证码
@@ -188,7 +159,7 @@ public class CapchaManager {
         }
     }
 
-    public boolean checkCaptcha(String answerCode) throws RuntimeException{
+    public static boolean checkCaptcha(String answerCode) throws RuntimeException{
         String url = "https://kyfw.12306.cn/passport/captcha/captcha-check";
         boolean isOk = false;
         try {

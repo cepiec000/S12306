@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.seven.ticket.ai.Easy12306AI;
 import com.seven.ticket.ai.ImageAI;
 import com.seven.ticket.config.Constants;
-import com.seven.ticket.config.TicketConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
@@ -231,7 +230,6 @@ public class OkHttpRequest {
         return new UrlEncodedFormEntity(postData, StandardCharsets.UTF_8);
     }
 
-
     public static String getCaptchaBase64FromJson(String responseText) {
         // preprocessing result string
         String jsonStr = responseText.substring(responseText.indexOf("(") + 1, responseText.length() - 2);
@@ -261,18 +259,5 @@ public class OkHttpRequest {
             sb.append(DICT_CODE.get(Integer.parseInt(i) - 1));
         }
         return sb.toString();
-    }
-
-    public static void main(String[] args) throws IOException {
-        CloseableHttpClient httpClient = OkHttpRequest.getSession();
-        System.out.println();
-
-
-        ImageAI imageAI = new Easy12306AI(Constants.IMAGE_AI_URL, "D:\\logs\\production\\J12306-master\\captcha\\123123.png");
-        String code = imageAI.printCode();
-        System.out.println("code:" + code);
-        // 转化为图片坐标点
-        String answerCode = getCaptchaPos(code);
-        System.out.println(answerCode);
     }
 }

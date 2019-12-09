@@ -23,27 +23,71 @@ import java.util.HashMap;
 @Slf4j
 public class LoginManager {
 
+    public static boolean login() {
+        //1.检查是否要登陆
+        if (CapchaManager.needCapcha()) {
+            //2.获取验证码/解析验证码
+            String answerCode = getAnswerCode();
+            if (answerCode == null) {
+                return false;
+            }
+            //3.校验验证码
+            if (!CapchaManager.checkCaptcha(answerCode)) {
+                return false;
+            }
+            //5.登陆
+            return reLogin(answerCode);
+        }
+        return true;
+    }
+
+    public static boolean verifyOrderLogin(String token) {
+        String answerCode=getAnswerCode();
+        return CapchaManager.checkOrderCaptcha(answerCode, token);
+    }
+
+    private static String getAnswerCode() {
+        try {
+            log.info("获取验证码");
+            String base64Img = CapchaManager.getCaptchaBase64Img();
+            String filePath = CapchaManager.captchaBase64ImgToFile(base64Img);
+            log.info("AI智能解析验证码");
+            String codeIdx = CapchaManager.aiAnswerCode(filePath);
+            String answercode = OkHttpRequest.getCaptchaPos(codeIdx);
+            log.info("验证验证码:{}", answercode);
+            return answercode;
+
+        } catch (Exception e) {
+            log.error("解析验证码失败");
+        }
+        return null;
+    }
+
+
     /**
      * 登陆
      *
      * @param answer
      * @return
      */
-    public boolean reLogin(String answer) {
+    private static boolean reLogin(String answer) {
         log.info("开始登陆");
-        LoginResult loginResult = ManagerFactory.loginInstance().login(answer);
-        if (loginResult != null) {
-            String newapptk = ManagerFactory.loginInstance().uamtkStatic();
-            String appTk = ManagerFactory.loginInstance().getAppTk(newapptk);
-            if (StringUtils.isNotBlank(appTk)) {
-                log.info("登陆成功");
-                return true;
-            }
+        if (!doLogin(answer)) {
+            return false;
         }
-        return false;
+        String newapptk = uamtkStatic();
+        if (StringUtils.isBlank(newapptk)) {
+            return false;
+        }
+        String appTk = getAppTk(newapptk);
+        if (StringUtils.isBlank(appTk)) {
+            return false;
+        }
+        log.info("登陆成功");
+        return true;
     }
 
-    public String getAppTk(String newapptk) throws RuntimeException {
+    public static String getAppTk(String newapptk) throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/uamauthclient";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("tk", newapptk);
@@ -74,7 +118,7 @@ public class LoginManager {
         return null;
     }
 
-    public String uamtkStatic() throws RuntimeException {
+    public static String uamtkStatic() throws RuntimeException {
         String url = "https://kyfw.12306.cn/passport/web/auth/uamtk-static";
 
         HashMap<String, String> formData = new HashMap<>();
@@ -106,7 +150,7 @@ public class LoginManager {
         return null;
     }
 
-    public LoginResult login(String answer) throws RuntimeException {
+    public static boolean doLogin(String answer) throws RuntimeException {
         HashMap<String, String> formData = new HashMap<>();
         formData.put("username", TicketConfig.LOGIN_NAME);
         formData.put("password", TicketConfig.PASSWORD);
@@ -128,18 +172,18 @@ public class LoginManager {
             String responseText = OkHttpRequest.responseToString(response);
             LoginResult result = JSON.parseObject(responseText, LoginResult.class);
             if (result != null && result.getUamtk() != null) {
-                return result;
+                return true;
             } else {
                 log.error("登陆失败:{}", responseText);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return null;
+        return false;
     }
 
 
-    public boolean otn() throws RuntimeException {
+    public static boolean otn() throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/";
         HttpGet httpGet = OkHttpRequest.setRequestHeader(new HttpGet(url), true, false, true);
         try {

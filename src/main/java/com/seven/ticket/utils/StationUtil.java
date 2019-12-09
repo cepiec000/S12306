@@ -93,7 +93,35 @@ public class StationUtil {
         return false;
     }
 
-    public static String nowDate() {
+    public static Date strToDate(String date, String format) {
+        try {
+            return new SimpleDateFormat(format).parse(date);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static int compare(Date date1, Date date2) {
+        if (date1.getTime() > date2.getTime()) {
+            return 1;
+        } else if (date1.getTime() < date2.getTime()) {
+            return -1;
+        }
+        return 0;
+    }
+
+    public static String dateToStr(Date date, String format) {
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+            return dateFormat.format(date);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static String nowDateStr() {
         try {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
             return dateFormat.format(new Date());
@@ -101,6 +129,24 @@ public class StationUtil {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static Date nowDate() {
+        Calendar date = new GregorianCalendar();
+        date.set(Calendar.HOUR, 0);
+        date.set(Calendar.MINUTE, 0);
+        date.set(Calendar.MILLISECOND, 0);
+        date.set(Calendar.SECOND, 0);
+        return new Date(date.getTimeInMillis());
+    }
+
+    public static boolean checkTrainDate(String trainDate) {
+        Date date = strToDate(trainDate, "yyyy-MM-dd");
+        int c = compare(date, nowDate());
+        if (c < 0) {
+            return false;
+        }
+        return true;
     }
 
     public static String getGMT(String date) {
