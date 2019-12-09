@@ -25,6 +25,9 @@ import java.util.Set;
 @Slf4j
 public class RailCookieManager {
 
+    /**
+     * 模式一 ，固定URL 获取token
+     */
    public static void init2(){
        String url="https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=xzQIvaEleQ&hashCode=35nup1m6FOVXyoTJVLebRTqnIxmscYo_2mJCvkGS9IU&FMQw=0&q4f3=zh-CN&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=8946ffc6b619470a790de1a7b7d6683f&lEnu=2886994437&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=Win32&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=824x1536&tOHY=24xx864x1536&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(Windows%20NT%2010.0;%20Win64;%20x64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/78.0.3904.97%20Safari/537.36&E3gR=42f8c6830d6f3907fcbc9dd5fc505f3d&timestamp="+System.currentTimeMillis();
        HttpGet httpGet = OkHttpRequest
@@ -51,6 +54,10 @@ public class RailCookieManager {
         JSONObject jsonObject = JSON.parseObject(resposneText);
         return jsonObject;
     }
+
+    /**
+     * 模式二，自动获取
+     */
     public static void init(){
         log.info("获取RAIL COOKIE信息");
         WebClient webclient = new WebClient();

@@ -15,7 +15,7 @@ public class Application {
     public static void main(String[] args) {
         java.security.Security.setProperty("networkaddress.cache.ttl", "0");
         StationManager.init();
-        RailCookieManager.init2();
+        RailCookieManager.init();
         new CheckLoginThread().start();
         new QueryTicketThread().start();
 

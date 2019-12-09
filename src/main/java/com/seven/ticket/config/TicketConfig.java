@@ -8,11 +8,11 @@ package com.seven.ticket.config;
  **/
 public class TicketConfig {
     //登陆账户
-    public static final String LOGIN_NAME = "xxxxx";
-    public static final String PASSWORD = "xxxxx";
+    public static final String LOGIN_NAME = "xxx";
+    public static final String PASSWORD = "xxx";
 
     //发车时间
-    public static final String START_DATE = "2019-12-05";
+    public static final String START_DATE = "2019-12-15";
     public static final String FROM_NAME = "北京";
     public static final String TO_NAME = "长沙";
 
@@ -31,7 +31,7 @@ public class TicketConfig {
     public static final String[] SEATS = {"硬卧", "软卧"};
 
     //乘客 多个 逗号分割，（必须保证用户 已添加到 改账户里面）
-    public static final String PASSENGER_NAME = "xxxxx";
+    public static final String PASSENGER_NAME = "xxx,xxx";
 
 
 }
