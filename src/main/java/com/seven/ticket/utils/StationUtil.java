@@ -133,7 +133,7 @@ public class StationUtil {
 
     public static Date nowDate() {
         Calendar date = new GregorianCalendar();
-        date.set(Calendar.HOUR, 0);
+        date.set(Calendar.HOUR_OF_DAY, 0);
         date.set(Calendar.MINUTE, 0);
         date.set(Calendar.MILLISECOND, 0);
         date.set(Calendar.SECOND, 0);
@@ -149,6 +149,9 @@ public class StationUtil {
         return true;
     }
 
+    public static void main(String[] args) {
+        System.out.println(checkTrainDate("2019-12-09"));
+    }
     public static String getGMT(String date) {
         String str = "";
         TimeZone tz = TimeZone.getTimeZone("ETC/GMT-8");
