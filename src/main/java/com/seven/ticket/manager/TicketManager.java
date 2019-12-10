@@ -38,15 +38,18 @@ public class TicketManager {
             log.error("无法找到到达站站点【" + TicketConfig.TO_NAME + "】，请确保到达站点名正确。");
             System.exit(0);
         }
-        if (!StationUtil.checkTrainDate(trainDate)){
+        if (!StationUtil.checkTrainDate(trainDate)) {
             log.error("发车日期【" + TicketConfig.START_DATE + "】，不能小于当前日期。");
             System.exit(0);
         }
-        String url = "https://kyfw.12306.cn/otn/leftTicket/query?leftTicketDTO.train_date={0}&leftTicketDTO.from_station={1}&leftTicketDTO.to_station={2}&purpose_codes=ADULT";
+        String cdn = CdnManager.getCdn();
+        String url = "https://{3}/otn/leftTicket/query?leftTicketDTO.train_date={0}&leftTicketDTO.from_station={1}&leftTicketDTO.to_station={2}&purpose_codes=ADULT";
         url = url.replace("{0}", trainDate);
         url = url.replace("{1}", fromStation);
         url = url.replace("{2}", toStation);
+        url = url.replace("{3}", cdn);
         HttpGet httpget = new HttpGet(url);
+        System.out.println(url);
         httpget.setHeader("Host", OkHttpRequest.HOST);
         httpget.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
         httpget.setHeader("X-Requested-With", "XMLHttpRequest");
@@ -58,18 +61,19 @@ public class TicketManager {
                 String responseText = OkHttpRequest.responseToString(response);
                 List<QueryTicket> result = TicketConvert.analysisTicketData(responseText);
                 if (result != null && result.size() > 0) {
-                    log.info("查询到有效车票信息");
+                    log.info("CDN [{}] 查询到有效车票信息", cdn);
                     return result;
-                }else{
-                    log.info("未查询到有效车票信息");
+                } else {
+                    log.info("CDN [{}] 未查询到有效车票信息", cdn);
                 }
             } else {
-                log.error("网络错误，状态码：" + response.getStatusLine().getStatusCode());
+                log.error("CDN [{}] 网络错误，状态码：" + response.getStatusLine().getStatusCode(), cdn);
             }
 
         } catch (IOException e) {
-            log.error("查票开个小差~~{}",e.getMessage());
+            log.error(" CDN [{}] 查票开个小差~~{}", e.getMessage(), cdn);
         }
+        //https://sc.ftqq.com/SCU68395Tc81e476116e7164116c44f2e9a8351735def5b92b3561.send
         return null;
     }
 

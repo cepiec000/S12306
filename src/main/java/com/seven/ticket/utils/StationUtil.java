@@ -187,46 +187,55 @@ public class StationUtil {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 case ONE_DZ_TYPE:
                     if ("有".equals(bean.getFirstClassSeat()) || toInt(bean.getFirstClassSeat()) > 0) {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 case HARD_W_TYPE:
                     if ("有".equals(bean.getHardSleeper()) || toInt(bean.getHardSleeper()) > 0) {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 case SOFT_W_TYPE:
                     if ("有".equals(bean.getSoftSleeper()) || toInt(bean.getSoftSleeper()) > 0) {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 case HIG_SOFT_w_TYPE:
                     if ("有".equals(bean.getSeniorSoftSleeper()) || toInt(bean.getSeniorSoftSleeper()) > 0) {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 case MOVE_W_TYPE:
                     if ("有".equals(bean.getMoveSleeper()) || toInt(bean.getMoveSleeper()) > 0) {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 case BUSINESS_Z_TYPE:
                     if ("有".equals(bean.getBusinessClassSet()) || toInt(bean.getBusinessClassSet()) > 0) {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 case SOFT_Z_TYPE:
                     if ("有".equals(bean.getSoftSeat()) || toInt(bean.getSoftSeat()) > 0) {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 case HARD_Z_TYPE:
                     if ("有".equals(bean.getHardSeat()) || toInt(bean.getHardSeat()) > 0) {
                         bean.setPaySeatType(seatType.getCode());
                         return true;
                     }
+                    return false;
                 default:
                     return false;
 

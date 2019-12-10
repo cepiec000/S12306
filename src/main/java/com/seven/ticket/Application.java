@@ -1,5 +1,6 @@
 package com.seven.ticket;
 
+import com.seven.ticket.manager.CdnManager;
 import com.seven.ticket.manager.RailCookieManager;
 import com.seven.ticket.manager.StationManager;
 import com.seven.ticket.thread.CheckLoginThread;
@@ -18,6 +19,7 @@ public class Application {
         RailCookieManager.init();
         new CheckLoginThread().start();
         new QueryTicketThread().start();
+        CdnManager.init();
 
     }
 }

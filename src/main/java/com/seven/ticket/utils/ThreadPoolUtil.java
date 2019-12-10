@@ -18,9 +18,9 @@ public class ThreadPoolUtil {
     static {
         executor=new ThreadPoolExecutor(
                 //初始核心线程
-                10,
-                //最大线程
                 30,
+                //最大线程
+                50,
                 //允许线程闲置时间
                 20,
                 //允许线程闲置时间单位
@@ -31,6 +31,10 @@ public class ThreadPoolUtil {
                 new ThreadPoolExecutor.CallerRunsPolicy()
         );
     }
+    public static ThreadPoolExecutor getExecutor(){
+        return executor;
+    }
+
     public static void run(IP ip){
         if (executor!=null){
             executor.execute(new SaveIpThread(ip));
