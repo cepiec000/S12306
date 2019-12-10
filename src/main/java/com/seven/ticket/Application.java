@@ -13,7 +13,7 @@ import com.seven.ticket.thread.QueryTicketThread;
  **/
 public class Application {
     public static void main(String[] args) {
-        java.security.Security.setProperty("networkaddress.cache.ttl", "0");
+//        java.security.Security.setProperty("networkaddress.cache.ttl", "0");
         StationManager.init();
         RailCookieManager.init();
         new CheckLoginThread().start();
