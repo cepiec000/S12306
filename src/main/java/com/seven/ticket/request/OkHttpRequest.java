@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.seven.ticket.ai.Easy12306AI;
 import com.seven.ticket.ai.ImageAI;
 import com.seven.ticket.config.Constants;
+import com.seven.ticket.config.TicketConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
@@ -15,6 +16,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.DnsResolver;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -25,13 +27,17 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.impl.conn.SystemDefaultDnsResolver;
 import org.apache.http.impl.cookie.BasicClientCookie;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -64,9 +70,9 @@ public class OkHttpRequest {
 
     static {
 
-        HttpHost proxy=null;
-        if (Constants.proxy) {
-            proxy = new HttpHost(Constants.proxyIp, Constants.proxyPort, "http");
+        HttpHost proxy = null;
+        if (TicketConfig.proxy) {
+            proxy = new HttpHost(TicketConfig.proxyIp, TicketConfig.proxyPort, "http");
         }
         cookieStore = new BasicCookieStore();
         // create a http request config
@@ -92,24 +98,69 @@ public class OkHttpRequest {
                 }
             });
             sslsf = new SSLConnectionSocketFactory(builder.build(), new String[]{"SSLv2Hello", "SSLv3", "TLSv1"}, null, NoopHostnameVerifier.INSTANCE);
-            Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
-                    .register(HTTP, new PlainConnectionSocketFactory())
-                    .register(HTTPS, sslsf)
-                    .build();
-            cm = new PoolingHttpClientConnectionManager(registry);
-            cm.setMaxTotal(200);//max connection
-            cm.setDefaultMaxPerRoute(200);
+            setDefaultConnectionManager();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    public static DnsResolver getDnsResolver(String dnsIp) {
+
+        DnsResolver dnsResolver = new SystemDefaultDnsResolver() {
+            @Override
+            public InetAddress[] resolve(final String host) throws UnknownHostException {
+                if (host.equalsIgnoreCase(HOST)) {
+                    return new InetAddress[]{InetAddress.getByName(dnsIp)};
+                } else {
+                    return super.resolve(host);
+                }
+            }
+        };
+        return dnsResolver;
+
+
+    }
 
     /**
      * create a session instance
      *
      * @return
      */
+    public static CloseableHttpClient getSession(DnsResolver dnsResolver) {
+        if (httpClient == null) {
+            PoolingHttpClientConnectionManager manager = getConnectionManager(dnsResolver);
+            httpClient = HttpClients.custom()
+                    .setDefaultCookieStore(cookieStore)
+                    .setDefaultRequestConfig(requestConfig)
+                    .setConnectionManager(manager)
+                    .setConnectionManager(cm).build();
+        }
+        return httpClient;
+    }
+
+    public static PoolingHttpClientConnectionManager getConnectionManager(DnsResolver dnsResolver) {
+        Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
+                .register(HTTP, new PlainConnectionSocketFactory())
+                .register(HTTPS, sslsf)
+                .build();
+
+        PoolingHttpClientConnectionManager cdnCm = new PoolingHttpClientConnectionManager(registry, dnsResolver);
+        cdnCm.setMaxTotal(200);//max connection
+        cdnCm.setDefaultMaxPerRoute(200);
+        return cdnCm;
+    }
+
+    public static void setDefaultConnectionManager() {
+        Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
+                .register(HTTP, new PlainConnectionSocketFactory())
+                .register(HTTPS, sslsf)
+                .build();
+
+        cm = new PoolingHttpClientConnectionManager(registry);
+        cm.setMaxTotal(200);//max connection
+        cm.setDefaultMaxPerRoute(200);
+    }
+
     public static CloseableHttpClient getSession() {
         if (httpClient == null) {
             httpClient = HttpClients.custom()
@@ -120,7 +171,7 @@ public class OkHttpRequest {
         return httpClient;
     }
 
-    public static CloseableHttpClient getNewSession(CookieStore cookieStoren,RequestConfig config) {
+    public static CloseableHttpClient getNewSession(CookieStore cookieStoren, RequestConfig config) {
         return HttpClients.custom()
                 .setDefaultCookieStore(cookieStoren)
                 .setDefaultRequestConfig(config)
@@ -199,7 +250,7 @@ public class OkHttpRequest {
         if (cookieStore != null) {
             BasicClientCookie cookie = new BasicClientCookie(key, val);
             cookie.setVersion(0);
-            cookie.setDomain(Constants.HOST);
+            cookie.setDomain(HOST);
             cookie.setPath("/");
             cookieStore.addCookie(cookie);
         }

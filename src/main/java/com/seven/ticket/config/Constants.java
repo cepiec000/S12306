@@ -5,8 +5,6 @@ package com.seven.ticket.config;
  */
 public class Constants {
 
-    public final static String HOST = "kyfw.12306.cn";
-
     public final static String IMAGE_AI_URL = "http://shell.teachx.cn:12306/predict";
 
     public final static String IP66="http://www.66ip.cn/areaindex_1/1.html";
@@ -22,8 +20,5 @@ public class Constants {
 
     //验证码图片储存目录
     public static final String VERIFY_IMG_PATH = "D:/logs/production/captcha/";
-    //代理
-    public static final boolean proxy = false;
-    public static final String proxyIp = "34.69.217.48";
-    public static final int proxyPort = 3128;
+
 }

@@ -51,7 +51,6 @@ public class TicketConvert {
                 }
             }
         }catch (Exception e){
-            log.error("您的网络出现异常:查票结果不正常");
         }
         return data;
     }

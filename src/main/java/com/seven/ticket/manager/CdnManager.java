@@ -8,10 +8,10 @@ import com.seven.ticket.utils.StationUtil;
 import com.seven.ticket.utils.ThreadPoolUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -32,7 +32,9 @@ import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -47,13 +49,10 @@ public class CdnManager {
     private static final String fileName = "/cdn.txt";
     private static List<String> cdnList = new ArrayList<>();
     private static List<String> list = new ArrayList<>();
+    private static Set<String> vaildCdnSet = new HashSet<>();
     public static CloseableHttpClient httpClient = null;
     private static RequestConfig requestConfig;
     private static SSLContextBuilder builder = null;
-    private static PoolingHttpClientConnectionManager cm;
-    private static SSLConnectionSocketFactory sslsf = null;
-    private static final String HTTP = "http";
-    private static final String HTTPS = "https";
     private static Integer integer = 0;
 
     static {
@@ -66,14 +65,6 @@ public class CdnManager {
                     return true;
                 }
             });
-            sslsf = new SSLConnectionSocketFactory(builder.build(), new String[]{"SSLv2Hello", "SSLv3", "TLSv1"}, null, NoopHostnameVerifier.INSTANCE);
-            Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
-                    .register(HTTP, new PlainConnectionSocketFactory())
-                    .register(HTTPS, sslsf)
-                    .build();
-            cm = new PoolingHttpClientConnectionManager(registry);
-            cm.setMaxTotal(200);//max connection
-            cm.setDefaultMaxPerRoute(200);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -82,10 +73,15 @@ public class CdnManager {
                 .setConnectionRequestTimeout(5000)
                 .setSocketTimeout(3000)
                 .build();
+
+    }
+
+    private static HttpClient getHttpClient(String dnsIp) {
         httpClient = HttpClients.custom()
                 .setDefaultCookieStore(new BasicCookieStore())
                 .setDefaultRequestConfig(requestConfig)
-                .setConnectionManager(cm).build();
+                .setConnectionManager(OkHttpRequest.getConnectionManager(OkHttpRequest.getDnsResolver(dnsIp))).build();
+        return httpClient;
     }
 
     public static void init() {
@@ -130,28 +126,25 @@ public class CdnManager {
     }
 
     private static boolean checkCdn(String cdnIp, CountDownLatch cdl) {
-        HttpGet httpGet = new HttpGet("https://" + cdnIp + "/otn/leftTicket/query?leftTicketDTO.train_date=" + StationUtil.nowDateStr() + "&leftTicketDTO.from_station=BJP&leftTicketDTO.to_station=CSQ&purpose_codes=ADULT");
+        HttpGet httpGet = new HttpGet("https://kyfw.12306.cn/otn/HttpZF/GetJS");
         httpGet.setConfig(requestConfig);
         httpGet.setHeader("Host", OkHttpRequest.HOST);
         httpGet.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
         httpGet.setHeader("X-Requested-With", "XMLHttpRequest");
-        httpGet.setHeader("Referer", "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc");
+        httpGet.setHeader("Referer", "https://www.12306.cn/index/");
         CloseableHttpResponse response = null;
         long start = System.currentTimeMillis();
         try {
-            response = httpClient.execute(httpGet);
+            response = (CloseableHttpResponse) getHttpClient(cdnIp).execute(httpGet);
             String responseText = OkHttpRequest.responseToString(response);
             long end = System.currentTimeMillis();
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK
-                    && responseText != null) {
-                JSONObject object = JSON.parseObject(responseText);
-                if (object.get("data") != null) {
-                    list.add(cdnIp);
-                    log.info("有效IP [{}]", cdnIp);
-                    return true;
-                }
+            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK && responseText != null) {
+                list.add(cdnIp);
+//                log.info("有效IP [{}]", cdnIp);
+                return true;
             }
         } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             cdl.countDown();
         }
@@ -170,7 +163,14 @@ public class CdnManager {
             ip = list.get(integer);
             integer++;
         }
+        if (vaildCdnSet.contains(ip)) {
+            ip = getCdn();
+        }
         return ip;
+    }
+
+    public static void setVaildCdn(String cdnIp) {
+        vaildCdnSet.add(cdnIp);
     }
 
     public static void main(String[] args) {

@@ -6,9 +6,12 @@ import com.seven.ticket.entity.QueryTicket;
 import com.seven.ticket.request.OkHttpRequest;
 import com.seven.ticket.utils.StationUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.DnsResolver;
+import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 
 import java.io.IOException;
 import java.util.List;
@@ -43,19 +46,18 @@ public class TicketManager {
             System.exit(0);
         }
         String cdn = CdnManager.getCdn();
-        String url = "https://{3}/otn/leftTicket/query?leftTicketDTO.train_date={0}&leftTicketDTO.from_station={1}&leftTicketDTO.to_station={2}&purpose_codes=ADULT";
+        DnsResolver dnsResolver = OkHttpRequest.getDnsResolver(cdn);
+        String url = "https://kyfw.12306.cn/otn/leftTicket/query?leftTicketDTO.train_date={0}&leftTicketDTO.from_station={1}&leftTicketDTO.to_station={2}&purpose_codes=ADULT";
         url = url.replace("{0}", trainDate);
         url = url.replace("{1}", fromStation);
         url = url.replace("{2}", toStation);
-        url = url.replace("{3}", cdn);
         HttpGet httpget = new HttpGet(url);
-        System.out.println(url);
         httpget.setHeader("Host", OkHttpRequest.HOST);
         httpget.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
         httpget.setHeader("X-Requested-With", "XMLHttpRequest");
         httpget.setHeader("Referer", "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc");
         try {
-            CloseableHttpResponse response = OkHttpRequest.getSession().execute(httpget);
+            CloseableHttpResponse response = OkHttpRequest.getSession(dnsResolver).execute(httpget);
 
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 String responseText = OkHttpRequest.responseToString(response);
@@ -71,7 +73,7 @@ public class TicketManager {
             }
 
         } catch (IOException e) {
-            log.error(" CDN [{}] 查票开个小差~~{}", e.getMessage(), cdn);
+            log.error(" CDN [{}] 查票开个小差~~{}", cdn,e.getMessage());
         }
         //https://sc.ftqq.com/SCU68395Tc81e476116e7164116c44f2e9a8351735def5b92b3561.send
         return null;

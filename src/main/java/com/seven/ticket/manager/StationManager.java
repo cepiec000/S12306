@@ -1,6 +1,5 @@
 package com.seven.ticket.manager;
 
-import com.alibaba.fastjson.JSON;
 import com.seven.ticket.request.OkHttpRequest;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -44,7 +43,7 @@ public class StationManager {
             CloseableHttpResponse response = OkHttpRequest.getSession().execute(httpGet);
             result = OkHttpRequest.responseToString(response);
         } catch (IOException e) {
-            System.out.println("网络异常:"+e.getMessage());
+            System.out.println("网络异常:" + e.getMessage());
             System.exit(0);
         }
         int l1 = result.indexOf("'");
@@ -65,7 +64,6 @@ public class StationManager {
         }
         logger.info("初始化车站信息完成");
     }
-
 
 
 }

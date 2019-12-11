@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.gargoylesoftware.htmlunit.*;
 import com.gargoylesoftware.htmlunit.util.Cookie;
 import com.seven.ticket.config.Constants;
+import com.seven.ticket.config.TicketConfig;
 import com.seven.ticket.entity.RailCookie;
 import com.seven.ticket.request.OkHttpRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -83,9 +84,9 @@ public class RailCookieManager {
         WebRequest request = null;
         try {
             request = new WebRequest(new URL("https://www.12306.cn/index/"));
-            if (Constants.proxy) {
-                request.setProxyHost(Constants.proxyIp);
-                request.setProxyPort(Constants.proxyPort);
+            if (TicketConfig.proxy) {
+                request.setProxyHost(TicketConfig.proxyIp);
+                request.setProxyPort(TicketConfig.proxyPort);
             }
             request.setAdditionalHeader("Host", "kyfw.12306.cn");
             request.setAdditionalHeader("User-Agent", OkHttpRequest.USER_AGENT);
