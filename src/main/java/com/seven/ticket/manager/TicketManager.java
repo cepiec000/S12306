@@ -5,11 +5,7 @@ import com.seven.ticket.convert.TicketConvert;
 import com.seven.ticket.entity.QueryTicket;
 import com.seven.ticket.request.HttpRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 
-import java.io.IOException;
 import java.util.List;
 
 /**

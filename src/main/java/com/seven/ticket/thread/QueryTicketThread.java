@@ -1,11 +1,8 @@
 package com.seven.ticket.thread;
 
-import com.alibaba.fastjson.JSON;
-import com.seven.ticket.config.Constants;
 import com.seven.ticket.config.TicketConfig;
 import com.seven.ticket.entity.QueryTicket;
 import com.seven.ticket.manager.OrderManager;
-import com.seven.ticket.manager.RailCookieManager;
 import com.seven.ticket.manager.StationManager;
 import com.seven.ticket.manager.TicketManager;
 import com.seven.ticket.utils.StationUtil;
