@@ -1,11 +1,10 @@
 package com.seven.ticket.manager;
 
-import com.seven.ticket.request.OkHttpRequest;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import com.seven.ticket.config.Constants;
+import com.seven.ticket.request.HttpRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,15 +35,15 @@ public class StationManager {
      * 初始化车站 strings[0] 车站名 strings[1] 车站代码
      */
     public static void init() {
-        HttpGet httpGet = OkHttpRequest
-                .setRequestHeader(new HttpGet("https://kyfw.12306.cn/otn/resources/js/framework/station_name.js"), true, false, false);
+        String url = "https://kyfw.12306.cn/otn/resources/js/framework/station_name.js";
+        HttpRequest request = HttpRequest.get(url)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT).send();
         String result = null;
-        try {
-            CloseableHttpResponse response = OkHttpRequest.getSession().execute(httpGet);
-            result = OkHttpRequest.responseToString(response);
-        } catch (IOException e) {
-            System.out.println("网络异常:" + e.getMessage());
-            System.exit(0);
+        result = request.body();
+        if (StringUtils.isBlank(result)) {
+            logger.info("获取车站信息失败");
+            return;
         }
         int l1 = result.indexOf("'");
         int l2 = result.length();

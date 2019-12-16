@@ -3,17 +3,15 @@ package com.seven.ticket.manager;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.seven.ticket.config.Constants;
 import com.seven.ticket.config.TicketConfig;
 import com.seven.ticket.entity.QueryTicket;
 import com.seven.ticket.enums.SeatTypeEnum;
-import com.seven.ticket.request.OkHttpRequest;
+import com.seven.ticket.request.HttpRequest;
 import com.seven.ticket.thread.CheckLoginThread;
 import com.seven.ticket.utils.StationUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -179,17 +177,16 @@ public class OrderManager {
         String url = "https://kyfw.12306.cn/otn/login/checkUser";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("_json_att", "");
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc");
-        httpPost.setHeader("Accept", "*/*");
-        CloseableHttpResponse response = null;
-        try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
+
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc")
+                .header(HttpRequest.HEADER_ACCEPT, "*/*").send();
+
+        if (request.ok()) {
+            String responseText = request.body();
             JSONObject object = JSON.parseObject(responseText);
             if (object != null && !object.getBoolean("status") && object.getIntValue("httpstatus") == 200) {
                 log.info(object.getString("messages"));
@@ -200,8 +197,8 @@ public class OrderManager {
             } else {
                 log.error("验证用户失败:{}", responseText);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } else {
+            log.warn("验证用户失败 http status={}", request.code());
         }
         return false;
     }
@@ -218,34 +215,34 @@ public class OrderManager {
             formData.put("query_from_station_name", TicketConfig.FROM_NAME);
             formData.put("query_to_station_name", TicketConfig.TO_NAME);
             formData.put("undefined", null);
-            HttpPost httpPost = new HttpPost(url);
-            httpPost.setEntity(OkHttpRequest.doPostData(formData));
-            httpPost.setHeader("Host", OkHttpRequest.HOST);
-            httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-            httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc");
-            httpPost.setHeader("Accept", "*/*");
-            httpPost.setHeader("Origin", "https://kyfw.12306.cn");
-            httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
-            httpPost.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
-            httpPost.setHeader("X-Requested-With", "XMLHttpRequest");
-            CloseableHttpResponse response = null;
-
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
-            JSONObject object = JSON.parseObject(responseText);
-            if (object != null && "N".equals(object.getString("data")) && object.getBoolean("status")) {
-                log.info("预下单成功");
-                return true;
-            } else if (object != null && "Y".equals(object.getString("data")) && object.getBoolean("status")) {
-                log.info("预下单成功");
-                log.warn("注意:您选择的列车距开车时间很近了，请确保有足够的时间抵达车站，并办理安全检查、实名制验证及检票等手续，以免耽误您的旅行!");
-                return true;
-            } else if (object != null && !object.getBoolean("status") && object.getJSONArray("messages") != null) {
-                log.info(object.getJSONArray("messages").toString());
-                System.exit(0);
+            HttpRequest request = HttpRequest.post(url, formData)
+                    .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                    .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                    .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                    .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc")
+                    .header(HttpRequest.HEADER_ACCEPT, "*/*")
+                    .header(HttpRequest.HEADER_ORIGIN, "https://kyfw.12306.cn")
+                    .header(HttpRequest.HEADER_CONTENT_ENCODING, "gzip, deflate, br")
+                    .header(HttpRequest.HEADER_LANGUAGE, "zh-CN,zh;q=0.9")
+                    .header(HttpRequest.HEADER_X_REQUESTED_WITH, "XMLHttpRequest").send();
+            if (request.ok()) {
+                String responseText = request.body();
+                JSONObject object = JSON.parseObject(responseText);
+                if (object != null && "N".equals(object.getString("data")) && object.getBoolean("status")) {
+                    log.info("预下单成功");
+                    return true;
+                } else if (object != null && "Y".equals(object.getString("data")) && object.getBoolean("status")) {
+                    log.info("预下单成功");
+                    log.warn("注意:您选择的列车距开车时间很近了，请确保有足够的时间抵达车站，并办理安全检查、实名制验证及检票等手续，以免耽误您的旅行!");
+                    return true;
+                } else if (object != null && !object.getBoolean("status") && object.getJSONArray("messages") != null) {
+                    log.info(object.getJSONArray("messages").toString());
+                    System.exit(0);
+                } else {
+                    log.error("预下单失败:{}", responseText);
+                }
             } else {
-                log.error("预下单失败:{}", responseText);
+                log.warn("预下单失败 http status={}", request.code());
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -266,17 +263,15 @@ public class OrderManager {
         formData.put("orderSequence_no", orderId);
         formData.put("_json_att", "");
         formData.put("REPEAT_SUBMIT_TOKEN", token);
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/confirmPassenger/initDc");
-        httpPost.setHeader("X-Requested-With", "XMLHttpRequest");
-        CloseableHttpResponse response = null;
-        try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc")
+                .header(HttpRequest.HEADER_X_REQUESTED_WITH, "XMLHttpRequest").send();
+
+        if (request.ok()) {
+            String responseText = request.body();
             JSONObject object = JSON.parseObject(responseText);
             if (object != null && object.getBoolean("status") && object.getInteger("httpstatus").equals(200)) {
                 log.info("恭喜您！成功购买 {}-{} 车票 ，订单号: {}", ticket.getTrainNum(), SeatTypeEnum.nameOf(ticket.getPaySeatType()).getName(), orderId);
@@ -284,24 +279,22 @@ public class OrderManager {
             } else {
                 log.error("购票失败，{}", responseText);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } else {
+            log.error("购票失败 http status={}", request.code());
         }
         return false;
     }
 
     public static String queryOrderWaitTime(String token) {
         String url = "https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime?random=" + System.currentTimeMillis() + "&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN=" + token;
-        HttpGet httpGet = new HttpGet(url);
-        httpGet.setHeader("Host", OkHttpRequest.HOST);
-        httpGet.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpGet.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpGet.setHeader("Referer", "https://kyfw.12306.cn/otn/confirmPassenger/initDc");
-        httpGet.setHeader("X-Requested-With", "XMLHttpRequest");
-        CloseableHttpResponse response = null;
-        try {
-            response = OkHttpRequest.getSession().execute(httpGet);
-            String responseText = OkHttpRequest.responseToString(response);
+        HttpRequest request = HttpRequest.get(url)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/confirmPassenger/initDc")
+                .header(HttpRequest.HEADER_X_REQUESTED_WITH, "XMLHttpRequest").send();
+        if (request.ok()) {
+            String responseText = request.body();
             JSONObject object = JSON.parseObject(responseText);
             if (object != null && object.getBoolean("status") && object.getJSONObject("data").get("orderId") != null) {
                 String orderId = object.getJSONObject("data").getString("orderId");
@@ -314,8 +307,8 @@ public class OrderManager {
             } else {
                 log.info("轮询获取 订单号失败:{}", responseText);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } else {
+            log.warn("轮询获取 失败 http status={}", request.code());
         }
         return null;
     }
@@ -349,21 +342,20 @@ public class OrderManager {
         formData.put("dwAll", "N");
         formData.put("_json_att", null);
         formData.put("REPEAT_SUBMIT_TOKEN", token);
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/confirmPassenger/initDc");
-        httpPost.setHeader("Accept", "*/*");
-        httpPost.setHeader("Origin", "https://kyfw.12306.cn");
-        httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
-        httpPost.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
-        httpPost.setHeader("X-Requested-With", "XMLHttpRequest");
-        CloseableHttpResponse response = null;
-        try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
+
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/confirmPassenger/initDc")
+                .header(HttpRequest.HEADER_ACCEPT, "*/*")
+                .header(HttpRequest.HEADER_ORIGIN, "https://kyfw.12306.cn")
+                .header(HttpRequest.HEADER_CONTENT_ENCODING, "gzip, deflate, br")
+                .header(HttpRequest.HEADER_LANGUAGE, "zh-CN,zh;q=0.9")
+                .header(HttpRequest.HEADER_X_REQUESTED_WITH, "XMLHttpRequest").send();
+
+        if (request.ok()) {
+            String responseText = request.body();
             JSONObject object = JSON.parseObject(responseText);
             if (object != null && object.getBoolean("status") && object.getJSONObject("data").getBoolean("submitStatus")) {
                 log.info("提交订单成功:success");
@@ -371,8 +363,8 @@ public class OrderManager {
             } else {
                 log.error("提交订单失败:{}", responseText);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } else {
+            log.warn("提交订单失败 http status={}", request.code());
         }
         return false;
     }
@@ -391,21 +383,18 @@ public class OrderManager {
         formData.put("train_location", ticket.getTrainLocation());
         formData.put("_json_att", null);
         formData.put("REPEAT_SUBMIT_TOKEN", token);
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/confirmPassenger/initDc");
-        httpPost.setHeader("Accept", "*/*");
-        httpPost.setHeader("Origin", "https://kyfw.12306.cn");
-        httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
-        httpPost.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
-        httpPost.setHeader("X-Requested-With", "XMLHttpRequest");
-        CloseableHttpResponse response = null;
-        try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/confirmPassenger/initDc")
+                .header(HttpRequest.HEADER_ACCEPT, "*/*")
+                .header(HttpRequest.HEADER_ORIGIN, "https://kyfw.12306.cn")
+                .header(HttpRequest.HEADER_CONTENT_ENCODING, "gzip, deflate, br")
+                .header(HttpRequest.HEADER_LANGUAGE, "zh-CN,zh;q=0.9")
+                .header(HttpRequest.HEADER_X_REQUESTED_WITH, "XMLHttpRequest").send();
+        if (request.ok()) {
+            String responseText = request.body();
             JSONObject object = JSON.parseObject(responseText);
             if (object != null && object.getBoolean("status")) {
                 JSONObject objectData = object.getJSONObject("data");
@@ -420,8 +409,8 @@ public class OrderManager {
             } else {
                 log.error("获取排队信息失败:{}", responseText);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } else {
+            log.warn("获取排队信息失败 http status={}", request.code());
         }
         return false;
     }
@@ -436,21 +425,15 @@ public class OrderManager {
 
         HashMap<String, String> formData = new HashMap<>();
         formData.put("_json_att", "");
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc");
-        httpPost.setHeader("Accept", "*/*");
-        CloseableHttpResponse response = null;
-        try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
-            return getTokenMap(responseText);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc")
+                .header(HttpRequest.HEADER_ACCEPT, "*/*").send();
+
+        return getTokenMap(request.body());
     }
 
     /**
@@ -473,38 +456,42 @@ public class OrderManager {
         formData.put("whatsSelect", "1");
         formData.put("_json_att", "");
         formData.put("REPEAT_SUBMIT_TOKEN", token);
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/confirmPassenger/initDc");
-        httpPost.setHeader("Accept", "*/*");
-        CloseableHttpResponse response = null;
+
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/confirmPassenger/initDc")
+                .header(HttpRequest.HEADER_ACCEPT, "*/*").send();
+
+
         try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
-            JSONObject object = JSON.parseObject(responseText);
-            if (object != null && object.getIntValue("httpstatus") == 200
-                    && object.getBoolean("status")
-                    && object.getJSONObject("data").getBoolean("submitStatus")
-                    && "N".equals(object.getJSONObject("data").getString("ifShowPassCode"))) {
-                log.info("下单无需验证码");
-                return 0;
-            } else if (object != null
-                    && object.getIntValue("httpstatus") == 200
-                    && object.getBoolean("status")
-                    && object.getJSONObject("data").getBoolean("submitStatus")
-                    && "Y".equals(object.getJSONObject("data").getString("ifShowPassCode"))) {
-                int ifShowPassCodeTime = object.getJSONObject("data").getInteger("ifShowPassCodeTime");
-                log.error("下单需要验证码");
-                Thread.sleep(ifShowPassCodeTime);
-                return 1;
+            if (request.ok()) {
+                String responseText = request.body();
+                JSONObject object = JSON.parseObject(responseText);
+                if (object != null && object.getIntValue("httpstatus") == 200
+                        && object.getBoolean("status")
+                        && object.getJSONObject("data").getBoolean("submitStatus")
+                        && "N".equals(object.getJSONObject("data").getString("ifShowPassCode"))) {
+                    log.info("下单无需验证码");
+                    return 0;
+                } else if (object != null
+                        && object.getIntValue("httpstatus") == 200
+                        && object.getBoolean("status")
+                        && object.getJSONObject("data").getBoolean("submitStatus")
+                        && "Y".equals(object.getJSONObject("data").getString("ifShowPassCode"))) {
+                    int ifShowPassCodeTime = object.getJSONObject("data").getInteger("ifShowPassCodeTime");
+                    log.error("下单需要验证码");
+                    Thread.sleep(ifShowPassCodeTime);
+                    return 1;
+                } else {
+                    log.error("检查是否可下订单失败:{}", object.getJSONObject("data").toJSONString());
+                }
             } else {
-                log.error("检查是否可下订单失败:{}", object.getJSONObject("data").toJSONString());
+                log.warn("检查是否可下订单 http status={}", request.code());
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
         return -1;
     }
@@ -521,17 +508,14 @@ public class OrderManager {
             HashMap<String, String> formData = new HashMap<>();
             formData.put("_json_att", "");
             formData.put("REPEAT_SUBMIT_TOKEN", token);
-            HttpPost httpPost = new HttpPost(url);
-            httpPost.setEntity(OkHttpRequest.doPostData(formData));
-            httpPost.setHeader("Host", OkHttpRequest.HOST);
-            httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-            httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/confirmPassenger/initDc");
-            httpPost.setHeader("Accept", "*/*");
-            CloseableHttpResponse response = null;
-            try {
-                response = OkHttpRequest.getSession().execute(httpPost);
-                String responseText = OkHttpRequest.responseToString(response);
+            HttpRequest request = HttpRequest.post(url, formData)
+                    .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                    .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                    .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                    .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/confirmPassenger/initDc")
+                    .header(HttpRequest.HEADER_ACCEPT, "*/*").send();
+            if (request.ok()) {
+                String responseText = request.body();
                 JSONObject object = JSON.parseObject(responseText);
                 if (object != null && object.getIntValue("httpstatus") == 200 && object.getBoolean("status")) {
                     log.info("获取乘客信息成功");
@@ -540,8 +524,8 @@ public class OrderManager {
                 } else {
                     log.error("获取乘客信息失败:{}", responseText);
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } else {
+                log.warn("获取乘客信息失败 http status={}", request.code());
             }
         }
         return userList;

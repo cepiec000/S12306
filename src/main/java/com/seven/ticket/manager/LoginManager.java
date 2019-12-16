@@ -2,16 +2,13 @@ package com.seven.ticket.manager;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.seven.ticket.config.Constants;
 import com.seven.ticket.config.TicketConfig;
 import com.seven.ticket.entity.LoginResult;
-import com.seven.ticket.request.OkHttpRequest;
+import com.seven.ticket.request.HttpRequest;
+import com.seven.ticket.utils.NumberUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-
-import java.io.IOException;
 import java.util.HashMap;
 
 /**
@@ -42,7 +39,7 @@ public class LoginManager {
     }
 
     public static boolean verifyOrderLogin(String token) {
-        String answerCode=getAnswerCode();
+        String answerCode = getAnswerCode();
         return CapchaManager.checkOrderCaptcha(answerCode, token);
     }
 
@@ -53,7 +50,7 @@ public class LoginManager {
             String filePath = CapchaManager.captchaBase64ImgToFile(base64Img);
             log.info("AI智能解析验证码");
             String codeIdx = CapchaManager.aiAnswerCode(filePath);
-            String answercode = OkHttpRequest.getCaptchaPos(codeIdx);
+            String answercode = NumberUtil.getCaptchaPos(codeIdx);
             log.info("验证验证码:{}", answercode);
             return answercode;
 
@@ -91,20 +88,18 @@ public class LoginManager {
         String url = "https://kyfw.12306.cn/otn/uamauthclient";
         HashMap<String, String> formData = new HashMap<>();
         formData.put("tk", newapptk);
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/resources/login.html");
-        httpPost.setHeader("Accept", "*/*");
-        httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
-        httpPost.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
-        httpPost.setHeader("Origin", "https://kyfw.12306.cn");
-        CloseableHttpResponse response = null;
-        try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/resources/login.html")
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_ACCEPT, "*/*")
+                .header(HttpRequest.HEADER_CONTENT_ENCODING, "gzip, deflate, br")
+                .header(HttpRequest.HEADER_LANGUAGE, "zh-CN,zh;q=0.9")
+                .header(HttpRequest.HEADER_ORIGIN, "https://kyfw.12306.cn").send();
+
+        if (request.ok()) {
+            String responseText = request.body();
             JSONObject object = JSON.parseObject(responseText);
             String appTk = object.getString("apptk");
             if (object == null || appTk == null) {
@@ -112,8 +107,8 @@ public class LoginManager {
             } else {
                 return appTk;
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } else {
+            log.warn("获取appTk失败 http status={}", request.code());
         }
         return null;
     }
@@ -123,20 +118,17 @@ public class LoginManager {
 
         HashMap<String, String> formData = new HashMap<>();
         formData.put("appid", "otn");
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/resources/login.html");
-        httpPost.setHeader("Accept", "*/*");
-        httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
-        httpPost.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
-        httpPost.setHeader("Origin", "https://kyfw.12306.cn");
-        CloseableHttpResponse response = null;
-        try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/resources/login.html")
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_ACCEPT, "*/*")
+                .header(HttpRequest.HEADER_CONTENT_ENCODING, "gzip, deflate, br")
+                .header(HttpRequest.HEADER_LANGUAGE, "zh-CN,zh;q=0.9")
+                .header(HttpRequest.HEADER_ORIGIN, "https://kyfw.12306.cn").send();
+        if (request.ok()) {
+            String responseText = request.body();
             JSONObject object = JSON.parseObject(responseText);
             String newAppTk = object.getString("newapptk");
             if (object == null || newAppTk == null) {
@@ -144,8 +136,8 @@ public class LoginManager {
             } else {
                 return newAppTk;
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } else {
+            log.warn("获取newapptk失败 http status={}", request.code());
         }
         return null;
     }
@@ -157,42 +149,35 @@ public class LoginManager {
         formData.put("appid", "otn");
         formData.put("answer", answer);
         String url = "https://kyfw.12306.cn/passport/web/login";
-        HttpPost httpPost = new HttpPost(url);
-        try {
-            httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/resources/login.html");
-            httpPost.setHeader("Host", OkHttpRequest.HOST);
-            httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-            httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            httpPost.setHeader("Accept", "application/json, text/javascript, */*; q=0.01");
-            httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
-            httpPost.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
-            httpPost.setHeader("Origin", "https://kyfw.12306.cn");
-            httpPost.setEntity(OkHttpRequest.doPostData(formData));
-            CloseableHttpResponse response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
+
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/resources/login.html")
+                .header(HttpRequest.HEADER_ACCEPT, "application/json, text/javascript, */*; q=0.01")
+                .header(HttpRequest.HEADER_CONTENT_ENCODING, "gzip, deflate, br")
+                .header(HttpRequest.HEADER_LANGUAGE, "zh-CN,zh;q=0.9")
+                .header(HttpRequest.HEADER_ORIGIN, "https://kyfw.12306.cn").send();
+
+        if (request.ok()) {
+            String responseText = request.body();
             LoginResult result = JSON.parseObject(responseText, LoginResult.class);
             if (result != null && result.getUamtk() != null) {
                 return true;
             } else {
                 log.error("登陆失败:{}", responseText);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } else {
+            log.error("登陆失败: http status={}", request.code());
         }
         return false;
     }
 
 
-    public static boolean otn() throws RuntimeException {
+    public static boolean otn(){
         String url = "https://kyfw.12306.cn/otn/";
-        HttpGet httpGet = OkHttpRequest.setRequestHeader(new HttpGet(url), true, false, true);
-        try {
-            CloseableHttpResponse response = OkHttpRequest.getSession().execute(httpGet);
-            if (response != null && response.getStatusLine().getStatusCode() == 200) {
-                return true;
-            }
-        } catch (IOException e) {
-        }
-        return false;
+        HttpRequest request = HttpRequest.get(url).send();
+        return request.ok();
     }
 }

@@ -1,7 +1,7 @@
 package com.seven.ticket.ai;
 
 import com.seven.ticket.config.Constants;
-import com.seven.ticket.request.OkHttpRequest;
+import com.seven.ticket.utils.NumberUtil;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.HttpClients;
@@ -37,7 +37,7 @@ public class Easy12306AI implements ImageAI {
                 post.setHeader("Host", "shell.teachx.cn:12306");
                 post.setHeader("Referer", "http://shell.teachx.cn:12306/");
                 post.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36");
-                String responseText = OkHttpRequest.responseToString(HttpClients.custom().build().execute(post));
+                String responseText = NumberUtil.responseToString(HttpClients.custom().build().execute(post));
                 responseText = responseText.replaceAll(" ", "");
                 String tagTxt = responseText.substring(responseText.indexOf("text:") + 5, responseText.indexOf(",images"));
                 String imagesTxt = responseText.substring(responseText.indexOf("images:") + 7);

@@ -3,24 +3,19 @@ package com.seven.ticket.manager;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.seven.ticket.config.Constants;
-import com.seven.ticket.request.OkHttpRequest;
+import com.seven.ticket.request.HttpRequest;
 import com.seven.ticket.utils.Base64Util;
+import com.seven.ticket.utils.NumberUtil;
 import com.seven.ticket.utils.RandomUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Map;
 
 /**
  * @Description: TODO
@@ -34,31 +29,34 @@ public class CapchaManager {
 
     public static boolean needCapcha() throws RuntimeException {
         String url = "https://kyfw.12306.cn/otn/login/conf";
-        HttpPost httpPost = OkHttpRequest
-                .setRequestHeader(new HttpPost(url), true, false, false);
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/resources/login.html");
-        httpPost.setHeader("Accept", "*/*");
-        httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
-        httpPost.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
-        httpPost.setHeader("X-Requested-With", "XMLHttpRequest");
-        CloseableHttpResponse response = null;
+        HttpRequest request = HttpRequest.post(url)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/resources/login.html")
+                .header(HttpRequest.HEADER_ACCEPT, "*/*")
+                .header(HttpRequest.HEADER_CONTENT_ENCODING, "gzip, deflate, br")
+                .header(HttpRequest.HEADER_LANGUAGE, "zh-CN,zh;q=0.9")
+                .header(HttpRequest.HEADER_X_REQUESTED_WITH, "XMLHttpRequest").send();
+
         try {
-            response = OkHttpRequest.getSession().execute(httpPost);
             // 设置到session的cookie中
-            String responseText = OkHttpRequest.responseToString(response);
-            JSONObject object = JSON.parseObject(responseText).getJSONObject("data");
-            if (object.getString("is_login_passCode").equals("Y") && object.getString("is_login").equals("N")) {
-                log.info("需要验证码登陆");
-                return true;
+            if (request.ok()) {
+                String responseText = request.body();
+                JSONObject object = JSON.parseObject(responseText);
+                JSONObject data = object.getJSONObject("data");
+                if (data != null && data.getString("is_login_passCode").equals("Y") && data.getString("is_login").equals("N")) {
+                    log.info("需要验证码登陆");
+                    return true;
+                } else {
+                    log.error("是否需要验证码失败:{}", responseText);
+                }
             } else {
-                log.error("是否需要验证码失败:{}", responseText);
+                log.warn("需要验证码登陆 http status={}", request.code());
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            log.error("需要验证码登陆 ERROR={}", e.getStackTrace());
         }
         return false;
     }
-
 
 
     public static boolean checkOrderCaptcha(String answerCode, String repeatToken) {
@@ -67,46 +65,41 @@ public class CapchaManager {
         formData.put("REPEAT_SUBMIT_TOKEN", repeatToken);
         formData.put("randCode", answerCode);
         formData.put("rand", "randp");
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(OkHttpRequest.doPostData(formData));
-        httpPost.setHeader("Host", OkHttpRequest.HOST);
-        httpPost.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        httpPost.setHeader("Referer", "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc");
-        httpPost.setHeader("Accept", "*/*");
-        CloseableHttpResponse response = null;
+
+
+        HttpRequest request = HttpRequest.post(url, formData)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc")
+                .header(HttpRequest.HEADER_ACCEPT, "*/*")
+                .header(HttpRequest.HEADER_CONTENT_TYPE, HttpRequest.CONTENT_TYPE_FORM).send();
+
         try {
-            response = OkHttpRequest.getSession().execute(httpPost);
-            String responseText = OkHttpRequest.responseToString(response);
-            JSONObject object = JSON.parseObject(responseText);
-            if (object != null && object.getBoolean("status") && "TRUE".equals(object.getJSONObject("data").getString("msg"))) {
-                log.info("下单验证码验证成功");
-                return true;
+            if (request.ok()) {
+                String responseText = request.body();
+                JSONObject object = JSON.parseObject(responseText);
+                if (object != null && object.getBoolean("status") && "TRUE".equals(object.getJSONObject("data").getString("msg"))) {
+                    log.info("下单验证码验证成功");
+                    return true;
+                } else {
+                    log.error("下单验证码验证失败:" + responseText);
+                }
             } else {
-                log.error("下单验证码验证失败:" + responseText);
+                log.warn("下单验证码验证失败 http status={}", request.code());
             }
-        } catch (IOException e) {
-            log.error("下单验证码异常:{}",e.getMessage());
+        } catch (Exception e) {
+            log.error("下单验证码异常:{}", e.getMessage());
         }
 
         return false;
     }
 
-    public static String getCaptchaBase64Img() throws RuntimeException{
+    public static String getCaptchaBase64Img() throws RuntimeException {
         String url = "https://kyfw.12306.cn/passport/captcha/captcha-image64?login_site=E&module=login&rand=sjrand&" + RandomUtil.genRandNumber() + "&callback=callback&_=" + System.currentTimeMillis();
-        HttpGet httpGet = OkHttpRequest.setRequestHeader(new HttpGet(url), true, false, false);
-        CloseableHttpResponse response = null;
-        try {
-            httpGet.setHeader("Accept", "text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01");
-            httpGet.setHeader("Referer", "https://kyfw.12306.cn/otn/resources/login.html");
-            httpGet.setHeader("Connection", "keep-alive");
-            response = OkHttpRequest.getSession().execute(httpGet);
-            String responseText = OkHttpRequest.responseToString(response);
-            return responseText;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
+        HttpRequest request=HttpRequest.get(url)
+                .header(HttpRequest.HEADER_ACCEPT,"text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01")
+                .header(HttpRequest.HEADER_REFERER,"https://kyfw.12306.cn/otn/resources/login.html")
+                .header("Connection","keep-alive").send();
+            return request.body();
     }
 
     public static String captchaBase64ImgToFile(String imgBase64) {
@@ -115,7 +108,7 @@ public class CapchaManager {
             file.mkdirs();
         }
         String filePath = Constants.VERIFY_IMG_PATH + getNewLoginCaptchaImgFileName();
-        Base64Util.Base64ToImage(OkHttpRequest.getCaptchaBase64FromJson(imgBase64), filePath);
+        Base64Util.Base64ToImage(NumberUtil.getCaptchaBase64FromJson(imgBase64), filePath);
         return filePath;
     }
 
@@ -135,7 +128,7 @@ public class CapchaManager {
                 post.setHeader("Host", "shell.teachx.cn:12306");
                 post.setHeader("Referer", "http://shell.teachx.cn:12306/");
                 post.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36");
-                String responseText = OkHttpRequest.responseToString(HttpClients.custom().build().execute(post));
+                String responseText = NumberUtil.responseToString(HttpClients.custom().build().execute(post));
                 responseText = responseText.replaceAll(" ", "");
                 String tagTxt = responseText.substring(responseText.indexOf("text:") + 5, responseText.indexOf(",images"));
                 String imagesTxt = responseText.substring(responseText.indexOf("images:") + 7);
@@ -159,21 +152,19 @@ public class CapchaManager {
         }
     }
 
-    public static boolean checkCaptcha(String answerCode) throws RuntimeException{
+    public static boolean checkCaptcha(String answerCode) throws RuntimeException {
         String url = "https://kyfw.12306.cn/passport/captcha/captcha-check";
         boolean isOk = false;
         try {
-            URIBuilder uriBuilder = new URIBuilder(url);
-            List<NameValuePair> list = new LinkedList<>();
-            list.add(new BasicNameValuePair("answer", answerCode));
-            list.add(new BasicNameValuePair("rand", "sjrand"));
-            list.add(new BasicNameValuePair("login_site", "E"));
-            list.add(new BasicNameValuePair("_", "" + System.currentTimeMillis()));
-            uriBuilder.setParameters(list);
-            HttpGet httpGet = OkHttpRequest.setRequestHeader(new HttpGet(uriBuilder.build()), true, false, false);
-            httpGet.setHeader("Referer", "https://kyfw.12306.cn/otn/resources/login.html");
-            CloseableHttpResponse response = OkHttpRequest.getSession().execute(httpGet);
-            String responseText = OkHttpRequest.responseToString(response);
+            Map<String,String> map = new HashMap<>();
+            map.put("answer", answerCode);
+            map.put("rand", "sjrand");
+            map.put("login_site", "E");
+            map.put("_", "" + System.currentTimeMillis());
+            HttpRequest request=HttpRequest.get(url,map)
+                    .header(HttpRequest.HEADER_REFERER,"https://kyfw.12306.cn/otn/resources/login.html")
+                    .header(HttpRequest.HEADER_HOST,Constants.HOST).send();
+            String responseText =  request.body();
             JSONObject jsonObject = JSON.parseObject(responseText);
             String resultCode = jsonObject.get("result_code").toString();
             isOk = "4".equals(resultCode);
@@ -184,7 +175,7 @@ public class CapchaManager {
                 log.info("验证码验证失败:{}", responseText);
             }
         } catch (Exception e) {
-           throw new RuntimeException(e);
+            log.error("验证码验证失败 ERRPR={}",e);
         }
         return isOk;
     }

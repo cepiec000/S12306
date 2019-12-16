@@ -1,17 +1,13 @@
 package com.seven.ticket.manager;
 
-import com.seven.ticket.config.TicketConfig;
+import com.seven.ticket.config.Constants;
 import com.seven.ticket.convert.TicketConvert;
 import com.seven.ticket.entity.QueryTicket;
-import com.seven.ticket.request.OkHttpRequest;
-import com.seven.ticket.utils.StationUtil;
+import com.seven.ticket.request.HttpRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpHost;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.conn.DnsResolver;
-import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,53 +25,33 @@ public class TicketManager {
      *
      * @return
      */
-    public static List<QueryTicket> query() throws RuntimeException {
-        String trainDate = TicketConfig.START_DATE;
-        String fromStation = StationManager.getStationByName(TicketConfig.FROM_NAME);
-        String toStation = StationManager.getStationByName(TicketConfig.TO_NAME);
-        if (fromStation == null) {
-            log.error("无法找到始发站站点【" + TicketConfig.FROM_NAME + "】，请确保始发站点名正确。");
-            System.exit(0);
-        }
-        if (toStation == null) {
-            log.error("无法找到到达站站点【" + TicketConfig.TO_NAME + "】，请确保到达站点名正确。");
-            System.exit(0);
-        }
-        if (!StationUtil.checkTrainDate(trainDate)) {
-            log.error("发车日期【" + TicketConfig.START_DATE + "】，不能小于当前日期。");
-            System.exit(0);
-        }
+    public static List<QueryTicket> query(String trainDate, String fromStation, String toStation) throws RuntimeException {
+
         String cdn = CdnManager.getCdn();
-        DnsResolver dnsResolver = OkHttpRequest.getDnsResolver(cdn);
-        String url = "https://kyfw.12306.cn/otn/leftTicket/query?leftTicketDTO.train_date={0}&leftTicketDTO.from_station={1}&leftTicketDTO.to_station={2}&purpose_codes=ADULT";
+//        DnsResolver dnsResolver = OkHttpRequest.getDnsResolver(cdn);
+        String url = "https://kyfw.12306.cn/otn/leftTicket/queryA?leftTicketDTO.train_date={0}&leftTicketDTO.from_station={1}&leftTicketDTO.to_station={2}&purpose_codes=ADULT";
         url = url.replace("{0}", trainDate);
         url = url.replace("{1}", fromStation);
         url = url.replace("{2}", toStation);
-        HttpGet httpget = new HttpGet(url);
-        httpget.setHeader("Host", OkHttpRequest.HOST);
-        httpget.setHeader("User-Agent", OkHttpRequest.USER_AGENT);
-        httpget.setHeader("X-Requested-With", "XMLHttpRequest");
-        httpget.setHeader("Referer", "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc");
-        try {
-            CloseableHttpResponse response = OkHttpRequest.getSession(dnsResolver).execute(httpget);
+        HttpRequest request = HttpRequest.get(url, cdn)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_X_REQUESTED_WITH, "XMLHttpRequest")
+                .header(HttpRequest.HEADER_REFERER, "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc").send();
 
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                String responseText = OkHttpRequest.responseToString(response);
-                List<QueryTicket> result = TicketConvert.analysisTicketData(responseText);
-                if (result != null && result.size() > 0) {
-                    log.info("CDN [{}] 查询到有效车票信息", cdn);
-                    return result;
-                } else {
-                    log.info("CDN [{}] 未查询到有效车票信息", cdn);
-                }
+        if (request.ok()) {
+            String responseText = request.body();
+            List<QueryTicket> result = TicketConvert.analysisTicketData(responseText);
+            if (result != null && result.size() > 0) {
+                log.info("CDN [{}] 查询到有效车票信息", cdn);
+                return result;
             } else {
-                log.error("CDN [{}] 网络错误，状态码：" + response.getStatusLine().getStatusCode(), cdn);
+                log.info("CDN [{}] 未查询到有效车票信息", cdn);
             }
-
-        } catch (IOException e) {
-            log.error(" CDN [{}] 查票开个小差~~{}", cdn,e.getMessage());
+        } else {
+            log.error("CDN [{}] 网络错误，状态码：", cdn,request.code());
         }
-        //https://sc.ftqq.com/SCU68395Tc81e476116e7164116c44f2e9a8351735def5b92b3561.send
+
         return null;
     }
 
