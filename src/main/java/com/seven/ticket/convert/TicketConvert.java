@@ -51,6 +51,7 @@ public class TicketConvert {
                 }
             }
         }catch (Exception e){
+            log.error("Ticket check data parsing exception:{}",e.getMessage());
         }
         return data;
     }

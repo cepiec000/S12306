@@ -14,6 +14,8 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @Description: TODO
@@ -23,14 +25,14 @@ import java.util.Set;
  **/
 @Slf4j
 public class RailCookieManager {
-
     private static final String fileName = "/railCookie.txt";
+
     /**
      * 自动获取
      */
     public static void init() {
         log.info("获取RAIL COOKIE信息");
-        if (loadCookie()){
+        if (loadCookie()) {
             return;
         }
         WebClient webclient = new WebClient();
@@ -101,7 +103,7 @@ public class RailCookieManager {
         return null;
     }
 
-    private static void addCookie(String railExpiration,String railDeviceId){
+    private static void addCookie(String railExpiration, String railDeviceId) {
         log.info("获取 RAIL_EXPIRATION 信息 :{}", railExpiration);
         log.info("获取 RAIL_DEVICEID 信息 :{}", railDeviceId);
         HttpRequest.addCookie("RAIL_EXPIRATION", railExpiration);
@@ -117,12 +119,12 @@ public class RailCookieManager {
         if (System.currentTimeMillis() >= cookie.getExpirAtion()) {
             return false;
         }
-        addCookie(String.valueOf(cookie.getExpirAtion()),cookie.getDeviceId());
+        addCookie(String.valueOf(cookie.getExpirAtion()), cookie.getDeviceId());
         return true;
     }
 
     private static void saveCookie(RailCookie railCookie) {
-        addCookie(String.valueOf(railCookie.getExpirAtion()),railCookie.getDeviceId());
+        addCookie(String.valueOf(railCookie.getExpirAtion()), railCookie.getDeviceId());
         try {
             String fileUtl = RailCookieManager.class.getResource(fileName).getFile();
             //写入的txt文档的路径
@@ -134,11 +136,6 @@ public class RailCookieManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public static void main(String[] args) {
-        String content = getFileCookie();
-        System.out.println(content);
     }
 
 }

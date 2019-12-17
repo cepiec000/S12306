@@ -31,6 +31,9 @@ public class CdnManager {
     private static Set<String> vaildCdnSet = new HashSet<>();
     private static Integer integer = 0;
 
+    static {
+        list.add(Constants.HOST);
+    }
 
     public static void init() {
         getFileCdn();
@@ -74,12 +77,12 @@ public class CdnManager {
     }
 
     private static boolean checkCdn(String cdnIp, CountDownLatch cdl) {
-       String url="https://kyfw.12306.cn/otn/HttpZF/GetJS";
-       HttpRequest request= HttpRequest.get(url,cdnIp)
-               .header(HttpRequest.HEADER_HOST,Constants.HOST)
-               .header(HttpRequest.HEADER_X_REQUESTED_WITH,"XMLHttpRequest")
-               .header(HttpRequest.HEADER_USER_AGENT,Constants.USER_AGENT)
-               .header(HttpRequest.HEADER_REFERER,"https://www.12306.cn/index/").send();
+        String url = "https://kyfw.12306.cn/otn/HttpZF/GetJS";
+        HttpRequest request = HttpRequest.get(url, cdnIp)
+                .header(HttpRequest.HEADER_HOST, Constants.HOST)
+                .header(HttpRequest.HEADER_X_REQUESTED_WITH, "XMLHttpRequest")
+                .header(HttpRequest.HEADER_USER_AGENT, Constants.USER_AGENT)
+                .header(HttpRequest.HEADER_REFERER, "https://www.12306.cn/index/").send();
 
 
         long start = System.currentTimeMillis();
@@ -89,7 +92,7 @@ public class CdnManager {
                 long end = System.currentTimeMillis();
                 if (responseText != null) {
                     list.add(cdnIp);
-                log.info("有效IP [{}]", cdnIp);
+                    log.info("有效IP [{}]", cdnIp);
                     return true;
                 }
             }
@@ -102,25 +105,24 @@ public class CdnManager {
     }
 
     public static String getCdn() {
-        if (list.size() == 0) {
-            return "kyfw.12306.cn";
-        }
-        if (integer == list.size()) {
-            integer = 0;
-        }
         String ip;
         synchronized (integer) {
             ip = list.get(integer);
             integer++;
-        }
-        if (vaildCdnSet.contains(ip)) {
-            ip = getCdn();
+            if (integer >= list.size()) {
+                integer = 0;
+            }
+            if (vaildCdnSet.contains(ip)) {
+                ip = getCdn();
+            }
         }
         return ip;
     }
 
     public static void setVaildCdn(String cdnIp) {
-        vaildCdnSet.add(cdnIp);
+        if (!Constants.HOST.equals(cdnIp)) {
+            vaildCdnSet.add(cdnIp);
+        }
     }
 
     public static void main(String[] args) {

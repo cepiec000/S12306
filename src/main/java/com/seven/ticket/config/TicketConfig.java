@@ -20,7 +20,7 @@ public class TicketConfig {
     public static final String[] STATION_TYPES = {};//{"Z", "T"}
 
     //指定 车次
-    public static final String[] TRAIN_NOS = {"Z1"};
+    public static final String[] TRAIN_NOS = {"Z1","Z285","Z5"};
 
     //查票速度 毫秒
     public static final Long QUERY_TIME = 1500L;
@@ -39,6 +39,6 @@ public class TicketConfig {
 
     //代理
     public static final boolean proxy = false;
-    public static final String proxyIp = "111.62.92.83";
-    public static final int proxyPort = 80;
+    public static final String proxyIp = "222.240.184.126";
+    public static final int proxyPort = 8086;
 }

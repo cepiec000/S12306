@@ -3,6 +3,7 @@ package com.seven.ticket.thread;
 import com.seven.ticket.config.TicketConfig;
 import com.seven.ticket.entity.QueryTicket;
 import com.seven.ticket.manager.OrderManager;
+import com.seven.ticket.manager.RailCookieManager;
 import com.seven.ticket.manager.StationManager;
 import com.seven.ticket.manager.TicketManager;
 import com.seven.ticket.utils.StationUtil;
@@ -13,12 +14,15 @@ import java.util.List;
 
 /**
  * @Description: TODO
- * @Author chendongdong
+ * @Author chendongdong 抢票中
  * @Date 2019/12/2 16:26
  * @Version V1.0
  **/
 @Slf4j
 public class QueryTicketThread extends Thread {
+
+    public static boolean ticketing = false;
+
     @Override
     public void run() {
         String trainDate = TicketConfig.START_DATE;
@@ -36,29 +40,51 @@ public class QueryTicketThread extends Thread {
             log.error("发车日期【" + TicketConfig.START_DATE + "】，不能小于当前日期。");
             System.exit(0);
         }
-
+        Date timingTime = StationUtil.strToDate(TicketConfig.timingTime, "yyyy-MM-dd HH:ss:mm");
+        String leftTicket = TicketManager.leftTicketUrl;
         while (true) {
             try {
-
-                if (TicketConfig.timing && StationUtil.strToDate(TicketConfig.timingTime, "yyyy-MM-dd HH:ss:mm").getTime() >= System.currentTimeMillis()) {
-                    log.info("开启定时抢票 当前时间:{} 抢票时间{}", StationUtil.dateToStr(new Date(), "yyyy-MM-dd HH:ss:mm"), TicketConfig.timingTime);
-                    Thread.sleep(TicketConfig.QUERY_TIME);
+                if (checkTiming(timingTime, TicketConfig.timingTime)) {
                     continue;
                 }
-                List<QueryTicket> tickets = TicketManager.query(trainDate,fromStation,toStation);
+                List<QueryTicket> tickets = TicketManager.query(trainDate, fromStation, toStation, leftTicket);
                 if (tickets != null) {
+                    ticketing = true;
                     for (QueryTicket ticket : tickets) {
-                        if (OrderManager.submitOrderEntrance(ticket)) {
-                            log.info("!!!!购票完成!!!!");
-                            System.exit(0);
-                        }
+                        new Thread(() -> {
+                            if (OrderManager.submitOrderEntrance(ticket)) {
+                                log.info("!!!!购票完成!!!!");
+                                System.exit(0);
+                            } else {
+                                ticketing = false;
+                            }
+                        }).start();
+
                     }
+                }
+                while (ticketing) {
+                    Thread.sleep(100L);
                 }
                 Thread.sleep(TicketConfig.QUERY_TIME);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * 检查是否定时抢票
+     *
+     * @return
+     * @throws InterruptedException
+     */
+    public static boolean checkTiming(Date timingTime, String timingTimeStr) throws InterruptedException {
+        if (TicketConfig.timing && timingTime.getTime() >= System.currentTimeMillis()) {
+            log.info("开启定时抢票 当前时间:{} 抢票时间{}", timingTimeStr);
+            Thread.sleep(TicketConfig.QUERY_TIME);
+            return true;
+        }
+        return false;
     }
 
     public static void main(String[] args) {

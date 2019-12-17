@@ -180,7 +180,7 @@ public class HttpRequest {
     }
 
 
-    public static HttpRequest get(final String url){
+    public static HttpRequest get(final String url) {
         return new HttpRequest(url, METHOD_GET, null, null);
     }
 
@@ -196,11 +196,11 @@ public class HttpRequest {
         return new HttpRequest(url, METHOD_GET, cdn, params);
     }
 
-    public static HttpRequest post(final String url){
+    public static HttpRequest post(final String url) {
         return new HttpRequest(url, METHOD_POST, null, null);
     }
 
-    public static HttpRequest post(final String url, String cdn){
+    public static HttpRequest post(final String url, String cdn) {
         return new HttpRequest(url, METHOD_POST, cdn, null);
     }
 
@@ -226,11 +226,11 @@ public class HttpRequest {
 
     public static UrlEncodedFormEntity doPostData(Map<String, String> postDataMap) {
         List<NameValuePair> postData = new LinkedList<>();
-        if (postDataMap!=null && postDataMap.size()>0)
-        for (Map.Entry<String, String> entry : postDataMap.entrySet()) {
-            BasicNameValuePair param = new BasicNameValuePair(entry.getKey(), entry.getValue());
-            postData.add(param);
-        }
+        if (postDataMap != null && postDataMap.size() > 0)
+            for (Map.Entry<String, String> entry : postDataMap.entrySet()) {
+                BasicNameValuePair param = new BasicNameValuePair(entry.getKey(), entry.getValue());
+                postData.add(param);
+            }
         return new UrlEncodedFormEntity(postData, StandardCharsets.UTF_8);
     }
 
@@ -243,8 +243,8 @@ public class HttpRequest {
             if (this.httpPost != null) {
                 response = httpClient.execute(httpPost);
             }
-        }  catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            log.error("http execute error={}", e.getMessage());
         }
         return this;
     }
